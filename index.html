@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>IDV – Assignment Hub</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root{
+      --bg:#f4f6fb;
+      --accent:#0047ab;
+      --accent-soft:#e3ecff;
+      --card-bg:#ffffff;
+      --text-main:#222222;
+      --text-muted:#666666;
+      --shadow-soft:0 10px 25px rgba(0,0,0,0.08);
+      --radius-lg:18px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      margin:0;
+      font-family:"Times New Roman", Georgia, serif;
+      background:radial-gradient(circle at top left,#e3efff 0%,#fdfdff 35%,#f8f1ff 100%);
+      color:var(--text-main);
+    }
+    #page{
+      max-width:1200px;
+      margin:26px auto 40px;
+      padding:0 18px;
+    }
+    header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      margin-bottom:22px;
+      gap:18px;
+    }
+    #title-block{
+      flex:1;
+    }
+    #title-main{
+      font-size:30px;
+      font-weight:bold;
+      letter-spacing:0.5px;
+      margin-bottom:4px;
+    }
+    #title-sub{
+      font-size:15px;
+      color:var(--text-muted);
+      max-width:520px;
+      line-height:1.4;
+    }
+    #title-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 10px;
+      border-radius:999px;
+      background:var(--accent-soft);
+      color:var(--accent);
+      font-size:12px;
+      margin-bottom:8px;
+    }
+    #title-pill span.emoji{font-size:14px;}
+    #search-panel{
+      width:330px;
+      background:var(--card-bg);
+      padding:12px 14px 14px;
+      border-radius:var(--radius-lg);
+      box-shadow:var(--shadow-soft);
+      position:relative;
+      overflow:hidden;
+    }
+    #search-panel::before{
+      content:"";
+      position:absolute;
+      inset:auto -40px -60px;
+      height:120px;
+      background:radial-gradient(circle at top,#ccd9ff 0%,transparent 60%);
+      opacity:0.6;
+      pointer-events:none;
+    }
+    #search-label{
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:1px;
+      color:var(--text-muted);
+      margin-bottom:4px;
+    }
+    #search-input-wrap{
+      position:relative;
+      margin-bottom:6px;
+    }
+    #searchInput{
+      width:100%;
+      padding:7px 28px 7px 9px;
+      border-radius:999px;
+      border:1px solid #d0d7ff;
+      font-size:14px;
+      outline:none;
+    }
+    #searchInput:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 1px rgba(0,71,171,0.1);
+    }
+    #search-magnifier{
+      position:absolute;
+      right:8px;
+      top:50%;
+      transform:translateY(-50%);
+      font-size:14px;
+      color:var(--accent);
+      pointer-events:none;
+    }
+    #search-hint{
+      font-size:11px;
+      color:var(--text-muted);
+    }
+    #search-hint kbd{
+      display:inline-block;
+      padding:1px 4px;
+      border-radius:4px;
+      border:1px solid #ccd;
+      font-size:10px;
+      background:#f8f8ff;
+      margin-inline:1px;
+    }
+    #suggestions{
+      position:relative;
+      margin-top:6px;
+      z-index:10;
+    }
+    #suggestions-list{
+      list-style:none;
+      margin:0;
+      padding:4px 0 2px;
+      background:rgba(255,255,255,0.9);
+      border-radius:12px;
+      border:1px solid #dde3ff;
+      box-shadow:0 8px 18px rgba(0,0,0,0.06);
+      max-height:170px;
+      overflow-y:auto;
+      display:none;
+    }
+    #suggestions-list li{
+      padding:4px 10px;
+      font-size:13px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    #suggestions-list li span.badge{
+      font-size:11px;
+      padding:1px 6px;
+      border-radius:999px;
+      background:var(--accent-soft);
+      color:var(--accent);
+    }
+    #suggestions-list li:hover,
+    #suggestions-list li.active{
+      background:#edf2ff;
+    }
+
+    main{
+      display:grid;
+      grid-template-columns: minmax(260px,360px) minmax(0,1fr);
+      gap:18px;
+    }
+
+    #cards{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:14px;
+    }
+    .card{
+      background:var(--card-bg);
+      border-radius:var(--radius-lg);
+      padding:12px 13px 11px;
+      box-shadow:var(--shadow-soft);
+      cursor:pointer;
+      position:relative;
+      overflow:hidden;
+      transform:translateY(10px);
+      opacity:0;
+      animation:cardIn 0.4s ease forwards;
+    }
+    .card:nth-child(2){animation-delay:0.06s;}
+    .card:nth-child(3){animation-delay:0.12s;}
+    .card:nth-child(4){animation-delay:0.18s;}
+    .card:hover{
+      transform:translateY(2px) scale(1.01);
+      box-shadow:0 16px 30px rgba(0,0,0,0.12);
+    }
+    .card-header-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:3px;
+    }
+    .card-title{
+      font-size:17px;
+      font-weight:bold;
+    }
+    .card-chip{
+      font-size:11px;
+      padding:2px 7px;
+      border-radius:999px;
+      background:var(--accent-soft);
+      color:var(--accent);
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    }
+    .card-chip span.dot{
+      width:6px;
+      height:6px;
+      border-radius:50%;
+      background:var(--accent);
+    }
+    .card-meta{
+      font-size:11px;
+      color:var(--text-muted);
+      margin-bottom:4px;
+    }
+    .card-desc{
+      font-size:13px;
+      color:var(--text-main);
+    }
+    .card-footer{
+      margin-top:6px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      font-size:11px;
+      color:var(--text-muted);
+    }
+    .card-footer span.link-hint{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    }
+    .card-footer span.link-hint::after{
+      content:"↳";
+      font-size:13px;
+    }
+    .card-footer span.tagline{
+      font-style:italic;
+    }
+    .hidden-card{
+      display:none;
+    }
+
+    #viewer{
+      background:var(--card-bg);
+      border-radius:var(--radius-lg);
+      box-shadow:var(--shadow-soft);
+      padding:10px;
+      min-height:400px;
+      display:flex;
+      flex-direction:column;
+    }
+    #viewer-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:6px;
+      gap:10px;
+    }
+    #viewer-title{
+      font-size:18px;
+      font-weight:bold;
+    }
+    #viewer-sub{
+      font-size:12px;
+      color:var(--text-muted);
+    }
+    #viewer-actions{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    #openFullBtn,
+    #toggleExpandBtn{
+      font-size:12px;
+      padding:5px 10px;
+      border-radius:999px;
+      border:1px solid #c5cffb;
+      background:#eef2ff;
+      color:var(--accent);
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    }
+    #openFullBtn span.icon,
+    #toggleExpandBtn span.icon{
+      font-size:13px;
+    }
+    #openFullBtn:disabled{
+      opacity:0.5;
+      cursor:not-allowed;
+    }
+    #openFullBtn:not(:disabled):hover,
+    #toggleExpandBtn:hover{
+      background:#dde4ff;
+    }
+
+    #viewer-iframe-wrap{
+      flex:1;
+      border-radius:14px;
+      overflow:hidden;
+      border:1px solid #dde3ff;
+      background:#fafbff;
+    }
+    #viewer-iframe{
+      width:100%;
+      height:100%;
+      border:none;
+      min-height:360px;
+    }
+    #viewer-placeholder{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      font-size:13px;
+      color:var(--text-muted);
+      padding:20px 10px;
+      text-align:center;
+      gap:4px;
+    }
+    #viewer-placeholder span.emoji{
+      font-size:28px;
+      margin-bottom:6px;
+    }
+
+    @keyframes cardIn{
+      to{
+        opacity:1;
+        transform:translateY(0);
+      }
+    }
+
+    /* Expanded viewer mode (same-tab full-width view) */
+    body.viewer-expanded main{
+      grid-template-columns:1fr;
+    }
+    body.viewer-expanded #cards{
+      display:none;
+    }
+    body.viewer-expanded #viewer{
+      min-height:calc(100vh - 160px);
+    }
+
+    @media (max-width:900px){
+      main{
+        grid-template-columns:1fr;
+      }
+      #search-panel{
+        width:100%;
+      }
+      #viewer-header{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      #viewer-actions{
+        align-self:flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="page">
+    <header>
+      <div id="title-block">
+        <div id="title-pill">
+          <span class="emoji">📊</span>
+          <span>IDV · Assignment Collection</span>
+        </div>
+        <div id="title-main">Interactive Assignment Hub</div>
+        <p id="title-sub">
+          Click any card to load the exact output page for that assignment. Use the smart search box to filter and jump quickly—
+          this homepage is your “control panel” on top of all four IDV assignments.
+        </p>
+      </div>
+      <aside id="search-panel">
+        <div id="search-label">Search assignments</div>
+        <div id="search-input-wrap">
+          <input type="text" id="searchInput" placeholder="Type title, topic, or keyword…" autocomplete="off" />
+          <span id="search-magnifier">🔍</span>
+        </div>
+        <div id="search-hint">
+          Suggestions appear as you type. Use your mouse or <kbd>↑</kbd><kbd>↓</kbd> to browse, <kbd>Enter</kbd> to open.
+        </div>
+        <div id="suggestions">
+          <ul id="suggestions-list"></ul>
+        </div>
+      </aside>
+    </header>
+
+    <main>
+      <section id="cards">
+        <article class="card" data-id="1" data-keywords="assignment 1 vector space normal distribution basic charts scatter bar line">
+          <div class="card-header-row">
+            <h2 class="card-title">Assignment 1 – Vector Space &amp; Basic Charts</h2>
+            <div class="card-chip"><span class="dot"></span>HTML + D3.js</div>
+          </div>
+          <div class="card-meta">Foundations · vector spaces · simple charts</div>
+          <p class="card-desc">
+            Interactive visualisation of vector spaces, PDFs, and simple charts.
+            Exactly the same output page from your Assignment&nbsp;1 code is loaded when you click.
+          </p>
+          <div class="card-footer">
+            <span class="link-hint">Open assignment</span>
+            <span class="tagline">Start from the basics</span>
+          </div>
+        </article>
+
+        <article class="card" data-id="2" data-keywords="assignment 2 svg transforms icons mirror rotate squeeze grayscale">
+          <div class="card-header-row">
+            <h2 class="card-title">Assignment 2 – SVG Transformations Gallery</h2>
+            <div class="card-chip"><span class="dot"></span>HTML + SVG</div>
+          </div>
+          <div class="card-meta">SVG · mirroring · rotation · squeezing</div>
+          <p class="card-desc">
+            10 SVG icons shown with left–right mirror, 180° rotation, vertical squeeze and grayscale.
+            Clicking this card shows the original Assignment&nbsp;2 page from your submission.
+          </p>
+          <div class="card-footer">
+            <span class="link-hint">Open assignment</span>
+            <span class="tagline">Geometry in action</span>
+          </div>
+        </article>
+
+        <article class="card" data-id="3" data-keywords="assignment 3 data to chart dashboard classification regression clustering">
+          <div class="card-header-row">
+            <h2 class="card-title">Assignment 3 – From Table to Chart</h2>
+            <div class="card-chip"><span class="dot"></span>D3.js Dashboard</div>
+          </div>
+          <div class="card-meta">Data tables · visual encodings · interactivity</div>
+          <p class="card-desc">
+            Turns tabular data into charts. Use this hub to jump straight into your
+            Assignment&nbsp;3 visualisation exactly as it appears in your original file.
+          </p>
+          <div class="card-footer">
+            <span class="link-hint">Open assignment</span>
+            <span class="tagline">See patterns emerge</span>
+          </div>
+        </article>
+
+        <article class="card" data-id="4" data-keywords="assignment 4 robust training performance cifar svhn mnist bar chart line chart dashboard">
+          <div class="card-header-row">
+            <h2 class="card-title">Assignment 4 – Robust Training Performance Dashboard</h2>
+            <div class="card-chip"><span class="dot"></span>D3.js · Multi-chart</div>
+          </div>
+          <div class="card-meta">Robustness · accuracy · interactive controls</div>
+          <p class="card-desc">
+            An interactive dashboard for ERM, PGDT, TRADES and more, using your Assignment&nbsp;4 code.
+            Click here to open the full dashboard with all buttons and transitions intact.
+          </p>
+          <div class="card-footer">
+            <span class="link-hint">Open assignment</span>
+            <span class="tagline">Stress-test the models</span>
+          </div>
+        </article>
+      </section>
+
+      <section id="viewer">
+        <div id="viewer-header">
+          <div>
+            <div id="viewer-title">Viewer</div>
+            <div id="viewer-sub">Click a card or choose from search to load an assignment page here.</div>
+          </div>
+          <div id="viewer-actions">
+            <button id="toggleExpandBtn">
+              <span class="icon">🔎</span>
+              <span class="label">Expand in page</span>
+            </button>
+            <button id="openFullBtn" disabled>
+              <span class="icon">⛶</span>
+              <span class="label">Open in new tab</span>
+            </button>
+          </div>
+        </div>
+        <div id="viewer-iframe-wrap">
+          <div id="viewer-placeholder">
+            <span class="emoji">👆</span>
+            <div>Select an assignment on the left or start typing in the search box above.</div>
+            <div>This panel will then show the exact HTML output from your original submission.</div>
+          </div>
+          <iframe id="viewer-iframe" src="" style="display:none;"></iframe>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const assignments = [
+      {
+        id: "1",
+        title: "Assignment 1 – Vector Space & Basic Charts",
+        path: "assignment1/IDV-assignment1-main/index.html",
+        keywords: "assignment 1 vector space pdf normal distribution scatter bar line"
+      },
+      {
+        id: "2",
+        title: "Assignment 2 – SVG Transformations Gallery",
+        path: "assignment2/IDV-assignment2-main/index.html",
+        keywords: "assignment 2 svg icons transform mirror rotate squeeze grayscale"
+      },
+      {
+        id: "3",
+        title: "Assignment 3 – From Table to Chart",
+        path: "assignment3/IDV-assignment3-main/index.html",
+        keywords: "assignment 3 table chart d3 dashboard"
+      },
+      {
+        id: "4",
+        title: "Assignment 4 – Robust Training Performance Dashboard",
+        path: "assignment4/IDV-assignment4-main/index.html",
+        keywords: "assignment 4 cifar svhn mnist robust training accuracy dashboard"
+      }
+    ];
+
+    const cards = Array.from(document.querySelectorAll(".card"));
+    const iframe = document.getElementById("viewer-iframe");
+    const placeholder = document.getElementById("viewer-placeholder");
+    const viewerTitle = document.getElementById("viewer-title");
+    const viewerSub = document.getElementById("viewer-sub");
+    const searchInput = document.getElementById("searchInput");
+    const suggestionsList = document.getElementById("suggestions-list");
+    const openFullBtn = document.getElementById("openFullBtn");
+    const toggleExpandBtn = document.getElementById("toggleExpandBtn");
+
+    let currentAssignment = null;
+    let expanded = false;
+
+    function loadAssignment(id){
+      const a = assignments.find(x => x.id === id);
+      if(!a) return;
+      currentAssignment = a;
+      iframe.style.display = "block";
+      placeholder.style.display = "none";
+      iframe.src = a.path;
+      viewerTitle.textContent = a.title;
+      viewerSub.textContent = "Showing original output: " + a.path;
+      cards.forEach(card => {
+        if(card.dataset.id === id){
+          card.style.outline = "2px solid #0047ab";
+        }else{
+          card.style.outline = "none";
+        }
+      });
+      openFullBtn.disabled = false;
+    }
+
+    cards.forEach(card => {
+      card.addEventListener("click", () => {
+        loadAssignment(card.dataset.id);
+      });
+    });
+
+    openFullBtn.addEventListener("click", () => {
+      if(currentAssignment){
+        window.open(currentAssignment.path, "_blank");
+      }
+    });
+
+    toggleExpandBtn.addEventListener("click", () => {
+      expanded = !expanded;
+      document.body.classList.toggle("viewer-expanded", expanded);
+      const iconSpan = toggleExpandBtn.querySelector(".icon");
+      const labelSpan = toggleExpandBtn.querySelector(".label");
+      if(expanded){
+        iconSpan.textContent = "🡼";
+        labelSpan.textContent = "Exit expand";
+      }else{
+        iconSpan.textContent = "🔎";
+        labelSpan.textContent = "Expand in page";
+      }
+    });
+
+    function updateFilterAndSuggestions(){
+      const q = searchInput.value.trim().toLowerCase();
+      suggestionsList.innerHTML = "";
+      cards.forEach(card => {
+        const text = (card.textContent || "").toLowerCase();
+        if(q === "" || text.includes(q)){
+          card.classList.remove("hidden-card");
+        }else{
+          card.classList.add("hidden-card");
+        }
+      });
+
+      if(q === ""){
+        suggestionsList.style.display = "none";
+        return;
+      }
+
+      const matches = assignments.filter(a =>
+        a.title.toLowerCase().includes(q) || a.keywords.toLowerCase().includes(q)
+      ).slice(0,6);
+
+      if(matches.length === 0){
+        suggestionsList.style.display = "none";
+        return;
+      }
+
+      matches.forEach(m => {
+        const li = document.createElement("li");
+        li.dataset.id = m.id;
+        li.innerHTML = `<span class="badge">A${m.id}</span> <span>${m.title}</span>`;
+        li.addEventListener("click", () => {
+          loadAssignment(m.id);
+          searchInput.blur();
+          suggestionsList.style.display = "none";
+        });
+        suggestionsList.appendChild(li);
+      });
+      suggestionsList.style.display = "block";
+    }
+
+    searchInput.addEventListener("input", updateFilterAndSuggestions);
+    searchInput.addEventListener("focus", updateFilterAndSuggestions);
+
+    document.addEventListener("click", (evt) => {
+      if(!evt.target.closest("#search-panel")){
+        suggestionsList.style.display = "none";
+      }
+    });
+
+    searchInput.addEventListener("keydown", (evt) => {
+      if(suggestionsList.style.display !== "block") return;
+      const items = Array.from(suggestionsList.querySelectorAll("li"));
+      if(items.length === 0) return;
+      let index = items.findIndex(li => li.classList.contains("active"));
+      if(evt.key === "ArrowDown"){
+        evt.preventDefault();
+        index = (index + 1) % items.length;
+        items.forEach(li => li.classList.remove("active"));
+        items[index].classList.add("active");
+        items[index].scrollIntoView({block:"nearest"});
+      }else if(evt.key === "ArrowUp"){
+        evt.preventDefault();
+        index = (index - 1 + items.length) % items.length;
+        items.forEach(li => li.classList.remove("active"));
+        items[index].classList.add("active");
+        items[index].scrollIntoView({block:"nearest"});
+      }else if(evt.key === "Enter"){
+        const active = suggestionsList.querySelector("li.active") || items[0];
+        if(active){
+          evt.preventDefault();
+          loadAssignment(active.dataset.id);
+          suggestionsList.style.display = "none";
+          searchInput.blur();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
