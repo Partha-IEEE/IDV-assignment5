@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>IDV Assignment 4 – Data to Chart with D3.js</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body{
+      margin:0;
+      font-family:"Times New Roman", Georgia, serif;
+      background:radial-gradient(circle at top left, #e3efff 0%, #fdfdff 35%, #f8f1ff 100%);
+    }
+
+    #wrapper{
+      width:960px;
+      margin:26px auto 40px;
+    }
+
+    /* --- header strip --- */
+    #page-header{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      margin:10px 0 14px;
+    }
+    #title-block{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      gap:6px;
+    }
+
+    #pill{
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:11px;
+      letter-spacing:0.08em;
+      text-transform:uppercase;
+      background:rgba(38,84,155,0.08);
+      color:#1f3b77;
+      border:1px solid rgba(38,84,155,0.18);
+    }
+    #title-text{
+      font-size:22px;
+      font-weight:bold;
+      color:#111827;
+    }
+    #title-accent{
+      width:110px;
+      height:4px;
+      border-radius:999px;
+      background:linear-gradient(90deg,#2563eb,#7c3aed,#ec4899);
+      box-shadow:0 0 12px rgba(37,99,235,0.45);
+      animation:glow 4s ease-in-out infinite alternate;
+    }
+    @keyframes glow{
+      from{ box-shadow:0 0 10px rgba(37,99,235,0.6);}
+      to{ box-shadow:0 0 18px rgba(236,72,153,0.65);}
+    }
+
+    #notes{
+      background:rgba(255,255,255,0.9);
+      padding:12px 18px 14px;
+      font-size:14px;
+      line-height:1.45;
+      border-radius:14px;
+      box-shadow:0 10px 32px rgba(15,23,42,0.12);
+      border:1px solid #e4e9f2;
+      backdrop-filter:blur(10px);
+    }
+    #notes h2{
+      margin:0 0 6px;
+      font-size:18px;
+      color:#111827;
+    }
+    #notes h4{
+      margin:10px 0 4px;
+      font-size:15px;
+      color:#111827;
+    }
+    #notes ul{
+      margin:4px 0 4px 18px;
+      padding:0;
+    }
+
+    #chart-card{
+      margin-top:18px;
+      background:radial-gradient(circle at top left, #f7f8ff 0, #ffffff 40%, #fef7ff 100%);
+      box-shadow:0 18px 45px rgba(15,23,42,0.18);
+      border-radius:20px;
+      padding:18px 22px 22px;
+      box-sizing:border-box;
+      border:1px solid #dee3f5;
+      transition:transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    #chart-card:hover{
+      transform:translateY(-3px);
+      box-shadow:0 24px 60px rgba(15,23,42,0.26);
+    }
+
+    .chart-heading{
+      font-size:20px;
+      margin:0 0 2px;
+      color:#111827;
+    }
+    .chart-subtitle{
+      margin:0 0 8px;
+      font-size:13px;
+      color:#4b5563;
+    }
+
+    /* metric chip under title */
+    #metric-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      margin:2px 0 10px;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:11px;
+      background:rgba(239,246,255,0.9);
+      border:1px solid #bfdbfe;
+      color:#1d4ed8;
+    }
+    #metric-dot{
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background:#1d4ed8;
+    }
+
+    /* --- controls --- */
+    .controls-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      margin-bottom:8px;
+      font-size:13px;
+    }
+    .controls-row label{
+      font-weight:bold;
+      margin-right:6px;
+      color:#111827;
+    }
+    .controls-row button{
+      padding:5px 12px;
+      font-size:13px;
+      border:1px solid #cbd5f1;
+      border-radius:999px;
+      background:linear-gradient(135deg,#f6f7fb,#edf1ff);
+      cursor:pointer;
+      box-shadow:0 1px 2px rgba(15,23,42,0.08);
+      transition:background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+    }
+    .controls-row button:hover{
+      background:linear-gradient(135deg,#ecf0ff,#e0e7ff);
+      transform:translateY(-1px);
+      box-shadow:0 3px 6px rgba(15,23,42,0.18);
+    }
+    .controls-row button.active{
+      background:linear-gradient(135deg,#1f3b77,#3656a6);
+      color:#ffffff;
+      border-color:#1f3b77;
+      box-shadow:0 4px 10px rgba(15,23,42,0.4);
+    }
+
+    #summary-box{
+      font-size:13px;
+      margin:4px 0 6px;
+      padding:6px 10px;
+      background:rgba(248,250,255,0.9);
+      border-radius:10px;
+      border:1px solid #d4ddf7;
+      color:#111827;
+    }
+    #summary-text b{
+      color:#1f3b77;
+    }
+    #insight-text{
+      display:block;
+      margin-top:2px;
+      font-size:11px;
+      color:#4b5563;
+    }
+    /* new: selection detail line */
+    #selection-text{
+      display:block;
+      margin-top:2px;
+      font-size:11px;
+      color:#111827;
+    }
+
+    /* --- legend --- */
+    #legend-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:4px;
+      font-size:11px;
+      color:#4b5563;
+    }
+    .legend-item{
+      display:flex;
+      align-items:center;
+      gap:4px;
+      padding:2px 7px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.9);
+      border:1px solid #e5e7eb;
+      transition:background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .legend-color{
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      box-shadow:0 0 0 1px rgba(31,41,55,0.35);
+    }
+    /* legend highlight */
+    .legend-item.legend-active{
+      border-color:#1f3b77;
+      background:linear-gradient(135deg,#eef2ff,#e0ecff);
+      box-shadow:0 2px 6px rgba(15,23,42,0.25);
+    }
+
+    #chart-area{
+      width:100%;
+      height:430px;
+      margin-top:4px;
+    }
+
+    .axis path,
+    .axis line{
+      stroke:#4b5563;
+      stroke-width:1;
+      shape-rendering:crispEdges;
+    }
+    .axis text{
+      font-size:11px;
+      fill:#111827;
+    }
+
+    .y-axis path{
+      display:none;
+    }
+    .y-axis .tick line{
+      stroke:#e3e7f3;
+    }
+
+    .bar{
+      cursor:pointer;
+      rx:4;
+      ry:4;
+      transition:filter 0.15s ease;
+    }
+    .bar:hover{
+      opacity:0.9;
+      filter:brightness(1.1);
+    }
+    /* fade other bars when one is focused/selected */
+    .bar-faded{
+      opacity:0.2;
+    }
+
+    .x-axis-label{
+      font-size:12px;
+      font-weight:bold;
+      fill:#111827;
+    }
+    .y-axis-label{
+      font-size:12px;
+      font-weight:bold;
+      fill:#111827;
+    }
+
+    /* tooltip */
+    #tooltip{
+      position:absolute;
+      pointer-events:none;
+      background:rgba(17,24,39,0.94);
+      color:#f9fafb;
+      padding:8px 10px;
+      border-radius:8px;
+      font-size:11px;
+      box-shadow:0 10px 30px rgba(15,23,42,0.5);
+      opacity:0;
+      transform:translateY(-4px);
+      transition:opacity 0.12s ease, transform 0.12s ease;
+      white-space:nowrap;
+      z-index:999;
+    }
+    #tooltip-title{
+      font-weight:bold;
+      margin-bottom:2px;
+    }
+    #tooltip-metric{
+      color:#bfdbfe;
+    }
+  </style>
+</head>
+<body>
+<div id="wrapper">
+
+  <div id="page-header">
+    <div id="title-block">
+      <div id="pill">IDV · Assignment 4</div>
+      <div id="title-text">Visualising Robust Training Performance</div>
+      <div id="title-accent"></div>
+    </div>
+  </div>
+
+  <div id="notes">
+    <h2>From Table to Interactive Dashboard</h2>
+    <p>
+      This page transforms the assignment’s <b>“groups of data”</b> table into an interactive dashboard:
+      each bar is a training <b>approach</b>, and its height shows a performance metric
+      (Standard Accuracy, Certified Robustness Rate, Certified Robust Accuracy) for
+      four datasets (CIFAR100, CIFAR10, SVHN, MNIST).
+    </p>
+    <h4>How to read and explore</h4>
+    <ul>
+      <li>Each coloured bar represents an <b>approach</b> (ERM, DA, PGDT, TRADES, MART, RS, IBP, PRL, TandT).</li>
+      <li>Use the buttons to switch between <b>metrics</b> and <b>datasets</b>, or to <b>sort approaches by value</b>.</li>
+      <li>Bars show values in <b>percentage</b> (0–100), aligned to a light grid for easier comparison.</li>
+      <li>On first load, bars <b>animate in automatically</b> (non-interaction transition).</li>
+      <li>Later changes happen when you click buttons; a floating tooltip reveals exact numbers (interaction).</li>
+    </ul>
+  </div>
+
+  <div id="chart-card">
+    <h3 class="chart-heading" id="chart-title">
+      Standard Accuracy on CIFAR10
+    </h3>
+    <p class="chart-subtitle">
+      Compare how different training strategies trade off clean accuracy and certified robustness
+      across CIFAR100, CIFAR10, SVHN, and MNIST.
+    </p>
+
+    <div id="metric-chip">
+      <div id="metric-dot"></div>
+      <span id="metric-chip-text">Standard Accuracy: performance on clean (non-attacked) test data.</span>
+    </div>
+
+    <div class="controls-row">
+      <label>Metric:</label>
+      <div id="metric-buttons"></div>
+    </div>
+    <div class="controls-row">
+      <label>Dataset:</label>
+      <div id="dataset-buttons"></div>
+    </div>
+    <div class="controls-row">
+      <label>Order:</label>
+      <div id="order-buttons"></div>
+    </div>
+
+    <div id="summary-box">
+      <span id="summary-text"></span>
+      <span id="insight-text"></span>
+      <span id="selection-text"></span>
+    </div>
+
+    <div id="legend-row"></div>
+
+    <div id="chart-area"></div>
+  </div>
+
+</div>
+
+<!-- floating tooltip -->
+<div id="tooltip">
+  <div id="tooltip-title"></div>
+  <div id="tooltip-metric"></div>
+  <div id="tooltip-value"></div>
+</div>
+
+<script>
+// -------------------------
+// 1. Data (from data_1.xlsx)
+// -------------------------
+const rawData = [
+  {
+    "Approach": "ERM",
+    "Std Acc - CIFAR100": 81.03,
+    "Std Acc - CIFAR10": 94.85,
+    "Std Acc - SVHN": 94.44,
+    "Std Acc - MNIST": 99.37,
+    "CRR - CIFAR100": 9.28,
+    "CRR - CIFAR10": 1.25,
+    "CRR - SVHN": 52.72,
+    "CRR - MNIST": 26.01,
+    "CRA - CIFAR100": 4.52,
+    "CRA - CIFAR10": 1.25,
+    "CRA - SVHN": 51.04,
+    "CRA - MNIST": 24.96
+  },
+  {
+    "Approach": "DA",
+    "Std Acc - CIFAR100": 78.27,
+    "Std Acc - CIFAR10": 94.21,
+    "Std Acc - SVHN": 94.69,
+    "Std Acc - MNIST": 99.42,
+    "CRR - CIFAR100": 15.04,
+    "CRR - CIFAR10": 81.08,
+    "CRR - SVHN": 82.08,
+    "CRR - MNIST": 85.23,
+    "CRA - CIFAR100": 6.15,
+    "CRA - CIFAR10": 76.07,
+    "CRA - SVHN": 82.01,
+    "CRA - MNIST": 84.12
+  },
+  {
+    "Approach": "PGDT",
+    "Std Acc - CIFAR100": 64.35,
+    "Std Acc - CIFAR10": 84.38,
+    "Std Acc - SVHN": 91.19,
+    "Std Acc - MNIST": 99.16,
+    "CRR - CIFAR100": 57.07,
+    "CRR - CIFAR10": 87.07,
+    "CRR - SVHN": 87.89,
+    "CRR - MNIST": 94.65,
+    "CRA - CIFAR100": 32.93,
+    "CRA - CIFAR10": 82.90,
+    "CRA - SVHN": 86.68,
+    "CRA - MNIST": 94.63
+  },
+  {
+    "Approach": "TRADES",
+    "Std Acc - CIFAR100": 62.55,
+    "Std Acc - CIFAR10": 80.42,
+    "Std Acc - SVHN": 86.16,
+    "Std Acc - MNIST": 99.10,
+    "CRR - CIFAR100": 59.27,
+    "CRR - CIFAR10": 88.54,
+    "CRR - SVHN": 87.89,
+    "CRR - MNIST": 94.76,
+    "CRA - CIFAR100": 38.85,
+    "CRA - CIFAR10": 78.80,
+    "CRA - SVHN": 84.76,
+    "CRA - MNIST": 94.61
+  },
+  {
+    "Approach": "MART",
+    "Std Acc - CIFAR100": 63.68,
+    "Std Acc - CIFAR10": 81.54,
+    "Std Acc - SVHN": 90.20,
+    "Std Acc - MNIST": 98.94,
+    "CRR - CIFAR100": 58.79,
+    "CRR - CIFAR10": 78.90,
+    "CRR - SVHN": 85.23,
+    "CRR - MNIST": 94.13,
+    "CRA - CIFAR100": 49.37,
+    "CRA - CIFAR10": 72.21,
+    "CRA - SVHN": 78.82,
+    "CRA - MNIST": 94.09
+  },
+  {
+    "Approach": "RS",
+    "Std Acc - CIFAR100": 56.87,
+    "Std Acc - CIFAR10": 89.45,
+    "Std Acc - SVHN": 88.35,
+    "Std Acc - MNIST": 97.16,
+    "CRR - CIFAR100": 60.38,
+    "CRR - CIFAR10": 90.00,
+    "CRR - SVHN": 76.29,
+    "CRR - MNIST": 87.15,
+    "CRA - CIFAR100": 47.50,
+    "CRA - CIFAR10": 87.98,
+    "CRA - SVHN": 70.64,
+    "CRA - MNIST": 86.29
+  },
+  {
+    "Approach": "IBP",
+    "Std Acc - CIFAR100": 39.45,
+    "Std Acc - CIFAR10": 48.40,
+    "Std Acc - SVHN": 73.09,
+    "Std Acc - MNIST": 97.78,
+    "CRR - CIFAR100": 49.34,
+    "CRR - CIFAR10": 54.70,
+    "CRR - SVHN": 61.94,
+    "CRR - MNIST": 89.18,
+    "CRA - CIFAR100": 29.20,
+    "CRA - CIFAR10": 40.00,
+    "CRA - SVHN": 57.26,
+    "CRA - MNIST": 88.51
+  },
+  {
+    "Approach": "PRL",
+    "Std Acc - CIFAR100": 64.89,
+    "Std Acc - CIFAR10": 93.82,
+    "Std Acc - SVHN": 92.00,
+    "Std Acc - MNIST": 99.32,
+    "CRR - CIFAR100": 56.71,
+    "CRR - CIFAR10": 90.71,
+    "CRR - SVHN": 93.11,
+    "CRR - MNIST": 96.03,
+    "CRA - CIFAR100": 50.77,
+    "CRA - CIFAR10": 90.63,
+    "CRA - SVHN": 91.07,
+    "CRA - MNIST": 95.01
+  },
+  {
+    "Approach": "TandT",
+    "Std Acc - CIFAR100": 65.56,
+    "Std Acc - CIFAR10": 94.23,
+    "Std Acc - SVHN": 94.79,
+    "Std Acc - MNIST": 99.32,
+    "CRR - CIFAR100": 62.05,
+    "CRR - CIFAR10": 95.08,
+    "CRR - SVHN": 93.15,
+    "CRR - MNIST": 97.80,
+    "CRA - CIFAR100": 52.07,
+    "CRA - CIFAR10": 91.75,
+    "CRA - SVHN": 92.81,
+    "CRA - MNIST": 96.80
+  }
+];
+
+// -------------------------
+// 2. Configuration
+// -------------------------
+const metrics = [
+  { id: "Std Acc", label: "Standard Accuracy", prefix: "Std Acc",
+    description: "Standard Accuracy: performance on clean (non-attacked) test data." },
+  { id: "CRR",     label: "Certified Robustness Rate", prefix: "CRR",
+    description: "Certified Robustness Rate: fraction of test samples provably robust to attacks." },
+  { id: "CRA",     label: "Certified Robust Accuracy", prefix: "CRA",
+    description: "Certified Robust Accuracy: accuracy restricted to provably robust samples." }
+];
+
+const datasets = [
+  { id: "CIFAR100", label: "CIFAR100", key: "CIFAR100" },
+  { id: "CIFAR10",  label: "CIFAR10",  key: "CIFAR10"  },
+  { id: "SVHN",     label: "SVHN",     key: "SVHN"     },
+  { id: "MNIST",    label: "MNIST",    key: "MNIST"    }
+];
+
+const orders = [
+  { id:"original", label:"Original order" },
+  { id:"value",    label:"Sort by value (desc)" }
+];
+
+let currentMetric  = metrics[0];
+let currentDataset = datasets[1];
+let currentOrder   = orders[0];
+
+// NEW: keep track of selected bar
+let selectedApproach = null;
+
+// -------------------------
+// 3. Controls (buttons)
+// -------------------------
+const metricButtons = d3.select("#metric-buttons")
+  .selectAll("button")
+  .data(metrics)
+  .enter()
+  .append("button")
+  .text(d => d.id)
+  .attr("class", d => d.id === currentMetric.id ? "active" : "")
+  .on("click", (event, d) => {
+    currentMetric = d;
+    metricButtons.classed("active", btn => btn.id === currentMetric.id);
+    updateMetricChip();
+    updateChart(false);
+  });
+
+const datasetButtons = d3.select("#dataset-buttons")
+  .selectAll("button")
+  .data(datasets)
+  .enter()
+  .append("button")
+  .text(d => d.label)
+  .attr("class", d => d.id === currentDataset.id ? "active" : "")
+  .on("click", (event, d) => {
+    currentDataset = d;
+    datasetButtons.classed("active", btn => btn.id === currentDataset.id);
+    updateChart(false);
+  });
+
+const orderButtons = d3.select("#order-buttons")
+  .selectAll("button")
+  .data(orders)
+  .enter()
+  .append("button")
+  .text(d => d.label)
+  .attr("class", d => d.id === currentOrder.id ? "active" : "")
+  .on("click", (event, d) => {
+    currentOrder = d;
+    orderButtons.classed("active", btn => btn.id === currentOrder.id);
+    updateChart(false);
+  });
+
+// -------------------------
+// 4. Legend
+// -------------------------
+const color = d3.scaleOrdinal()
+  .domain(rawData.map(d => d.Approach))
+  .range(d3.schemeTableau10);
+
+const legend = d3.select("#legend-row")
+  .selectAll(".legend-item")
+  .data(rawData)
+  .enter()
+  .append("div")
+  .attr("class", "legend-item");
+
+legend.append("span")
+  .attr("class", "legend-color")
+  .style("background", d => color(d.Approach));
+
+legend.append("span")
+  .text(d => d.Approach);
+
+// helper to highlight legend
+function highlightLegend(name){
+  d3.selectAll("#legend-row .legend-item")
+    .classed("legend-active", d => name && d.Approach === name);
+}
+
+// -------------------------
+// 5. SVG and scales
+// -------------------------
+const container = d3.select("#chart-area");
+const width  = container.node().clientWidth;
+const height = container.node().clientHeight;
+
+const margin = { top: 30, right: 20, bottom: 70, left: 60 };
+const innerWidth  = width  - margin.left - margin.right;
+const innerHeight = height - margin.top  - margin.bottom;
+
+const svg = container
+  .append("svg")
+  .attr("width",  width)
+  .attr("height", height);
+
+const g = svg.append("g")
+  .attr("transform", `translate(${margin.left},${margin.top})`);
+
+const xScale = d3.scaleBand()
+  .range([0, innerWidth])
+  .padding(0.25);
+
+const yScale = d3.scaleLinear()
+  .domain([0, 100])
+  .nice()
+  .range([innerHeight, 0]);
+
+const xAxisGroup = g.append("g")
+  .attr("transform", `translate(0,${innerHeight})`)
+  .attr("class", "axis x-axis");
+
+const yAxisGroup = g.append("g")
+  .attr("class", "axis y-axis");
+
+g.append("text")
+  .attr("class", "x-axis-label")
+  .attr("x", innerWidth / 2)
+  .attr("y", innerHeight + 45)
+  .attr("text-anchor", "middle")
+  .text("Approach");
+
+g.append("text")
+  .attr("class", "y-axis-label")
+  .attr("transform", "rotate(-90)")
+  .attr("x", -innerHeight / 2)
+  .attr("y", -46)
+  .attr("text-anchor", "middle")
+  .text("Percentage (%)");
+
+const barsGroup = g.append("g");
+
+// tooltip elements
+const tooltip = document.getElementById("tooltip");
+const ttTitle = document.getElementById("tooltip-title");
+const ttMetric= document.getElementById("tooltip-metric");
+const ttValue = document.getElementById("tooltip-value");
+
+// -------------------------
+// 6. Utility: metric chip
+// -------------------------
+function updateMetricChip(){
+  const chipText = document.getElementById("metric-chip-text");
+  chipText.textContent = currentMetric.description;
+}
+
+// -------------------------
+// 7. Utility: summary & insight
+// -------------------------
+function updateSummary(valueField, metricLabel, datasetLabel, dataSorted){
+  const sorted = [...dataSorted].sort((a,b)=> d3.descending(a[valueField], b[valueField]));
+  const best = sorted[0];
+  const second = sorted[1];
+
+  const summaryText = document.getElementById("summary-text");
+  summaryText.innerHTML =
+    `<b>${metricLabel}</b> on <b>${datasetLabel}</b>: <b>${best.Approach}</b> performs best ` +
+    `with <b>${best[valueField].toFixed(2)}%</b>.`;
+
+  const insightText = document.getElementById("insight-text");
+  if(second){
+    const diff = best[valueField] - second[valueField];
+    insightText.textContent =
+      `Insight: ${second.Approach} is second with ${second[valueField].toFixed(2)}%, ` +
+      `only ${diff.toFixed(2)} percentage points behind.`;
+  }else{
+    insightText.textContent = "";
+  }
+}
+
+// NEW: show details for selected bar (all three metrics for current dataset)
+function showSelectionDetails(d){
+  const selSpan = document.getElementById("selection-text");
+  const datasetKey   = currentDataset.key;
+  const datasetLabel = currentDataset.label;
+
+  const std = d[`Std Acc - ${datasetKey}`].toFixed(2);
+  const crr = d[`CRR - ${datasetKey}`].toFixed(2);
+  const cra = d[`CRA - ${datasetKey}`].toFixed(2);
+
+  selSpan.textContent =
+    `Selected ${d.Approach} on ${datasetLabel}: ` +
+    `Std Acc ${std}%, CRR ${crr}%, CRA ${cra}%.`;
+}
+
+// NEW: helper to fade / unfade bars
+function setBarsFaded(activeName){
+  barsGroup.selectAll(".bar")
+    .classed("bar-faded", b => activeName ? (b.Approach !== activeName) : false);
+}
+
+// -------------------------
+// 8. Main update function
+// -------------------------
+function updateChart(isFirstTime){
+  const valueField   = `${currentMetric.prefix} - ${currentDataset.key}`;
+  const metricLabel  = currentMetric.label;
+  const datasetLabel = currentDataset.label;
+
+  d3.select("#chart-title")
+    .text(`${metricLabel} on ${datasetLabel}`);
+
+  // choose ordering
+  let dataForChart = [...rawData];
+  if(currentOrder.id === "value"){
+    dataForChart.sort((a,b)=> d3.descending(a[valueField], b[valueField]));
+  }
+
+  // update x-scale domain
+  xScale.domain(dataForChart.map(d => d.Approach));
+
+  // axes
+  yAxisGroup
+    .transition()
+    .duration(800)
+    .call(
+      d3.axisLeft(yScale)
+        .ticks(5)
+        .tickSize(-innerWidth)
+        .tickSizeOuter(0)
+        .tickFormat(d => d + "%")
+    );
+
+  xAxisGroup
+    .transition()
+    .duration(800)
+    .call(d3.axisBottom(xScale));
+
+  // data join
+  const bars = barsGroup
+    .selectAll("rect.bar")
+    .data(dataForChart, d => d.Approach);
+
+  const tDuration = isFirstTime ? 1200 : 800;
+
+  const barsEnter = bars
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x", d => xScale(d.Approach))
+    .attr("width", xScale.bandwidth())
+    .attr("y", innerHeight)
+    .attr("height", 0)
+    .attr("fill", d => color(d.Approach));
+
+  const barsMerged = barsEnter.merge(bars);
+
+  barsMerged
+    .transition()
+    .duration(tDuration)
+    .attr("x", d => xScale(d.Approach))
+    .attr("width", xScale.bandwidth())
+    .attr("y", d => yScale(d[valueField]))
+    .attr("height", d => innerHeight - yScale(d[valueField]))
+    .attr("fill", d => color(d.Approach));
+
+  bars
+    .exit()
+    .transition()
+    .duration(500)
+    .attr("y", innerHeight)
+    .attr("height", 0)
+    .remove();
+
+  // tooltip + interactive highlighting
+  barsMerged
+    .on("mouseenter", (event, d) => {
+      // focus this bar + legend
+      setBarsFaded(d.Approach);
+      highlightLegend(d.Approach);
+    })
+    .on("mousemove", (event, d) => {
+      const v = d[valueField];
+      ttTitle.textContent = d.Approach;
+      ttMetric.textContent = `${metricLabel} · ${datasetLabel}`;
+      ttValue.textContent = `${v.toFixed(2)}%`;
+
+      const padding = 10;
+      const pageX = event.pageX;
+      const pageY = event.pageY;
+
+      tooltip.style.left = (pageX + padding) + "px";
+      tooltip.style.top  = (pageY - 10) + "px";
+      tooltip.style.opacity = 1;
+      tooltip.style.transform = "translateY(0px)";
+    })
+    .on("mouseleave", () => {
+      tooltip.style.opacity = 0;
+      tooltip.style.transform = "translateY(-4px)";
+
+      // if something is selected, keep that highlighted; otherwise reset
+      if(selectedApproach){
+        setBarsFaded(selectedApproach);
+        highlightLegend(selectedApproach);
+      }else{
+        setBarsFaded(null);
+        highlightLegend(null);
+      }
+    })
+    .on("click", (event, d) => {
+      // lock selection
+      selectedApproach = d.Approach;
+      setBarsFaded(selectedApproach);
+      highlightLegend(selectedApproach);
+      showSelectionDetails(d);
+
+      // stop svg background click from immediately clearing
+      event.stopPropagation();
+    });
+
+  // update summary + insight
+  updateSummary(valueField, metricLabel, datasetLabel, dataForChart);
+
+  // keep selection consistent after metric/dataset/order changes
+  const selectionSpan = document.getElementById("selection-text");
+  if(selectedApproach){
+    const selectedData = dataForChart.find(x => x.Approach === selectedApproach);
+    if(selectedData){
+      setBarsFaded(selectedApproach);
+      highlightLegend(selectedApproach);
+      showSelectionDetails(selectedData);
+    }else{
+      // if selected approach disappeared (should not happen), clear
+      selectedApproach = null;
+      setBarsFaded(null);
+      highlightLegend(null);
+      selectionSpan.textContent = "";
+    }
+  }else{
+    setBarsFaded(null);
+    highlightLegend(null);
+    selectionSpan.textContent = "";
+  }
+}
+
+// -------------------------
+// 9. Clear selection by clicking background
+// -------------------------
+svg.on("click", (event) => {
+  // if we clicked directly on the rect, let bar handler deal with it
+  if(event.target.tagName.toLowerCase() === "rect"){
+    return;
+  }
+  selectedApproach = null;
+  setBarsFaded(null);
+  highlightLegend(null);
+  document.getElementById("selection-text").textContent = "";
+});
+
+// -------------------------
+// 10. Initial render
+// -------------------------
+updateMetricChip();
+updateChart(true);
+</script>
+
+</body>
+</html>

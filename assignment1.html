@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PSI Readings — Interactive</title>
+  <style>
+    :root{
+      --bg:#e8f1f2; --ink:#0b1320;
+      --card:#0e1117; --line:#222733;
+      --thead:#111827; --thead-ink:#e5e7eb;
+      --cell:#0f172a; --cell-alt:#111827;
+      --focus:#22d3ee;
+    }
+
+    /* same overall background style as Assignment 4 */
+    html,body{
+      margin:0;
+      padding:0;
+      background:radial-gradient(circle at top left, #e3efff 0%, #fdfdff 35%, #f8f1ff 100%);
+      color:var(--ink);
+      font-family:"Times New Roman", Georgia, serif;
+    }
+
+    /* --- header strip (exact same design as Assignment 4) --- */
+    #page-header{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      margin:10px 0 14px;
+    }
+    #title-block{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      gap:6px;
+    }
+
+    #pill{
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:11px;
+      letter-spacing:0.08em;
+      text-transform:uppercase;
+      background:rgba(38,84,155,0.08);
+      color:#1f3b77;
+      border:1px solid rgba(38,84,155,0.18);
+    }
+    #title-text{
+      font-size:22px;
+      font-weight:bold;
+      color:#111827;
+    }
+    #title-accent{
+      width:110px;
+      height:4px;
+      border-radius:999px;
+      background:linear-gradient(90deg,#2563eb,#7c3aed,#ec4899);
+      box-shadow:0 0 12px rgba(37,99,235,0.45);
+      animation:glow 4s ease-in-out infinite alternate;
+    }
+    @keyframes glow{
+      from{ box-shadow:0 0 10px rgba(37,99,235,0.6);}
+      to{ box-shadow:0 0 18px rgba(236,72,153,0.65);}
+    }
+
+    .wrap{max-width:1200px;margin:0 auto;padding:0 1rem}
+    .controls{display:flex;flex-wrap:wrap;gap:.75rem 1rem;align-items:center;margin:.5rem 0 1rem}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(2,6,23,.25);margin:1rem 0}
+    .bar{background:var(--thead);color:var(--thead-ink);padding:.7rem 1rem;display:flex;align-items:center;justify-content:space-between;font-weight:700}
+    .stamp{font-weight:600}
+    .btn{appearance:none;border:1px solid var(--line);background:#0b1220;color:#e5e7eb;border-radius:10px;padding:.45rem .75rem;cursor:pointer}
+    .btn:focus{outline:2px solid var(--focus);outline-offset:1px}
+    .input{border:1px solid var(--line);background:#0b1220;color:#e5e7eb;border-radius:10px;padding:.45rem .6rem}
+    .toggles{display:flex;flex-wrap:wrap;gap:.35rem .75rem}
+    .pill-toggle{display:inline-flex;gap:.4rem;align-items:center;background:#0b1220;border:1px solid var(--line);color:#e5e7eb;padding:.25rem .5rem;border-radius:999px}
+    .pill-toggle input{accent-color:#22d3ee}
+    #error{color:#f87171;font-weight:700;padding:1rem}
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    caption{caption-side:top;background:var(--thead);color:var(--thead-ink);font-weight:700;padding:.6rem 1rem;text-align:center}
+    thead th{position:sticky;top:0;background:var(--thead);color:var(--thead-ink);border-bottom:1px solid var(--line);user-select:none;cursor:pointer}
+    th,td{padding:.72rem .75rem;border-bottom:1px solid var(--line);text-align:center;font-variant-numeric:tabular-nums;color:#d1d5db}
+    th:first-child,td:first-child{text-align:left}
+    th:first-child{width:24%; cursor:default}
+    tbody tr:nth-child(odd) td{background:var(--cell)}
+    tbody tr:nth-child(even) td{background:var(--cell-alt)}
+    tbody tr:hover td{filter:brightness(1.12)}
+    .reading{font-weight:600;color:#e2e8f0}
+    .sorted-asc::after{content:" ▲";font-size:.8em;color:#93c5fd}
+    .sorted-desc::after{content:" ▼";font-size:.8em;color:#93c5fd}
+    .col-highlight{box-shadow: inset 0 0 0 9999px rgba(255,255,255,.04)}
+    @media (max-width:720px){ th:first-child{width:38%} }
+  </style>
+</head>
+<body>
+  <!-- Assignment 4–style header -->
+  <div id="page-header">
+    <div id="title-block">
+      <div id="pill">IDV · Assignment 1</div>
+      <div id="title-text">PSI Readings — Interactive Table</div>
+      <div id="title-accent"></div>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <section class="card">
+      <div class="bar">
+        <span>Singapore PSI Realtime Readings</span>
+        <span id="stamp" class="stamp">Loading…</span>
+      </div>
+
+      <!-- interactive controls -->
+      <div class="controls" id="controls">
+        <input
+          id="search"
+          class="input"
+          type="search"
+          placeholder="Search metric… (e.g., pm25)"
+          aria-label="Search metric"
+        />
+        <button id="csvBtn" class="btn" type="button">Download CSV</button>
+        <div id="toggles" class="toggles" aria-label="Toggle regions"></div>
+      </div>
+
+      <div id="table"></div>
+      <div id="error" role="alert" aria-live="assertive"></div>
+    </section>
+  </main>
+
+  <!-- D3.js v7 -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script>
+    const API = "https://api.data.gov.sg/v1/environment/psi";
+    const ORDER = [
+      "o3_sub_index",
+      "pm10_twenty_four_hourly",
+      "pm10_sub_index",
+      "co_sub_index",
+      "pm25_twenty_four_hourly",
+      "so2_sub_index",
+      "co_eight_hour_max",
+      "no2_one_hour_max",
+      "so2_twenty_four_hourly",
+      "pm25_sub_index",
+      "psi_twenty_four_hourly",
+      "o3_eight_hour_max"
+    ];
+    const LABELS = Object.fromEntries(ORDER.map(k => [k, k]));
+
+    const stampSel = d3.select("#stamp");
+    const errorSel = d3.select("#error");
+    const tableRoot = d3.select("#table");
+    const togglesRoot = d3.select("#toggles");
+    const searchInput = d3.select("#search");
+    const csvBtn = d3.select("#csvBtn");
+
+    let regions = [];
+    let readings = {};
+    let visibleRegions = new Set(); // which region columns are shown
+    let sortState = { key: null, direction: null }; // {key: 'west', 'Metric', direction: 'asc'|'desc'}
+
+    const formatStamp = (iso) => {
+      const dt = new Date(iso);
+      const fmt = { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' };
+      return dt.toLocaleString(undefined, fmt);
+    };
+
+    function buildToggles() {
+      togglesRoot.selectAll("*").remove();
+      const items = togglesRoot
+        .selectAll("label.pill-toggle")
+        .data(regions, d => d)
+        .enter()
+        .append("label")
+        .attr("class", "pill-toggle");
+
+      items.append("input")
+        .attr("type", "checkbox")
+        .attr("checked", d => visibleRegions.has(d) ? true : null)
+        .attr("aria-label", d => "toggle " + d + " region")
+        .on("change", function(e, d){
+          if (this.checked) visibleRegions.add(d); else visibleRegions.delete(d);
+          renderTable();
+        });
+
+      items.append("span")
+        .text(d => d.charAt(0).toUpperCase()+d.slice(1));
+    }
+
+    function getFilteredMetrics() {
+      const q = (searchInput.node().value || "").trim().toLowerCase();
+      if (!q) return ORDER.slice();
+      return ORDER.filter(k => (LABELS[k]||k).toLowerCase().includes(q));
+    }
+
+    function valueOf(cell){
+      const v = (cell === null || cell === undefined) ? null : +cell;
+      return Number.isNaN(v) ? cell : v;
+    }
+
+    function applySort(rowsData) {
+      const { key, direction } = sortState;
+      if (!key || !direction) return rowsData;
+      const sorted = rowsData.slice();
+      if (key === "Metric") {
+        sorted.sort((a,b) => (LABELS[a]||a).localeCompare(LABELS[b]||b));
+      } else {
+        sorted.sort((a,b) => {
+          const va = valueOf((readings[a]||{})[key]);
+          const vb = valueOf((readings[b]||{})[key]);
+          if (va == null && vb == null) return 0;
+          if (va == null) return 1;
+          if (vb == null) return -1;
+          if (typeof va === "number" && typeof vb === "number") return va - vb;
+          return String(va).localeCompare(String(vb));
+        });
+      }
+      if (direction === "desc") sorted.reverse();
+      return sorted;
+    }
+
+    function renderTable() {
+      tableRoot.selectAll("*").remove();
+
+      const metrics = applySort(getFilteredMetrics());
+      const activeRegions = regions.filter(r => visibleRegions.has(r));
+
+      const table = tableRoot.append("table");
+      table.append("caption")
+        .text("Last updated " + stampSel.text().replace("Updated: ",""));
+      const thead = table.append("thead");
+      const tbody = table.append("tbody");
+
+      const headerRow = thead.append("tr");
+      headerRow.append("th")
+        .text("Metric")
+        .attr("data-col","Metric")
+        .classed("sorted-asc", sortState.key==="Metric" && sortState.direction==="asc")
+        .classed("sorted-desc", sortState.key==="Metric" && sortState.direction==="desc")
+        .on("click", () => toggleSort("Metric"));
+
+      headerRow.selectAll("th.region")
+        .data(activeRegions, d => d)
+        .enter()
+        .append("th")
+        .attr("class","region")
+        .attr("data-col", d => d)
+        .text(d => d.charAt(0).toUpperCase() + d.slice(1))
+        .classed("sorted-asc", d => sortState.key===d && sortState.direction==="asc")
+        .classed("sorted-desc", d => sortState.key===d && sortState.direction==="desc")
+        .on("click", (e,d) => toggleSort(d))
+        .on("mouseover", function(){
+          const col = d3.select(this).attr("data-col");
+          table.selectAll(`[data-col="${col}"]`).classed("col-highlight", true);
+        })
+        .on("mouseout", function(){
+          table.selectAll(".col-highlight").classed("col-highlight", false);
+        });
+
+      const rows = tbody.selectAll("tr")
+        .data(metrics, d => d)
+        .enter()
+        .append("tr");
+
+      rows.append("td")
+        .attr("class","reading")
+        .attr("data-col","Metric")
+        .text(k => LABELS[k] || k);
+
+      rows.selectAll("td.val")
+        .data(k => activeRegions.map(r => ({ col:r, value:(readings[k]||{})[r] })))
+        .enter()
+        .append("td")
+        .attr("class","val")
+        .attr("data-col", d => d.col)
+        .text(d => (d.value === null || d.value === undefined) ? "—" : d.value);
+    }
+
+    function toggleSort(col){
+      if (sortState.key !== col){
+        sortState = { key: col, direction: "asc" };
+      } else {
+        sortState.direction = (sortState.direction === "asc") ? "desc" : "asc";
+      }
+      renderTable();
+    }
+
+    function exportCSV(){
+      const metrics = applySort(getFilteredMetrics());
+      const activeRegions = regions.filter(r => visibleRegions.has(r));
+      const header = ["Metric", ...activeRegions];
+      const rows = metrics.map(m => [
+        LABELS[m] || m,
+        ...activeRegions.map(r => (readings[m]||{})[r] ?? "")
+      ]);
+      const csv = [header, ...rows].map(r => r.map(v => {
+        const s = String(v);
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+      }).join(",")).join("\n");
+      const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "psi_readings.csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    (async function(){
+      try{
+        const data = await d3.json(API, { cache: "no-store" });
+        const item = (data && data.items && data.items[0]) || null;
+        if (!item) throw new Error("No items in API response.");
+
+        const updatedISO = item.update_timestamp || item.timestamp || null;
+        stampSel.text(updatedISO ? ("Updated: " + formatStamp(updatedISO)) : "Updated: —");
+
+        readings = item.readings;
+        const firstKey = ORDER.find(k => readings[k]);
+        regions = Object.keys(readings[firstKey]);
+        visibleRegions = new Set(regions);
+
+        buildToggles();
+        renderTable();
+
+        searchInput.on("input", () => renderTable());
+        csvBtn.on("click", exportCSV);
+      }catch(e){
+        errorSel.text(e.message || String(e));
+        console.error(e);
+      }
+    })();
+  </script>
+</body>
+</html>
